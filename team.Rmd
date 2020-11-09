@@ -1,0 +1,110 @@
+---
+title: "ds202_lab5"
+author: "Patrick Origer"
+date: "11/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(tidyr)
+library(lubridate)
+library(tidyverse)
+
+acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
+
+per <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
+
+MakeNames <- readxl::read_xlsx("C:/Users/15154/Documents/MAKES.xlsx")
+
+CodeNames <- readxl::read_xlsx("C:/Users/15154/Downloads/FRPP_GLC_-_United_StatesSep292020.xlsx")
+
+CN <- CodeNames
+CN <- CN %>% rename(StateName = "State Name", STATE = "State Code")
+CN$STATE = as.integer(CN$STATE)
+```
+
+```{r}
+head(acc)
+```
+
+```{r}
+head(per)
+```
+
+```{r}
+q1Dat <- acc %>% mutate(DayOfWeek = wday(DAY_WEEK, label = TRUE)) %>%
+  group_by(DayOfWeek) %>%
+  summarise(NumAccidents = n())
+
+q1Dat
+```
+
+1. Some days of the week do have notably higher number of accidents than others. This is seen from Fridays, Saturdays, and Sundays having almost one thousand more accidents each than each of the other four days of the week.
+
+
+```{r}
+q2 <- per
+FatalPersons <- q2 %>% filter(INJ_SEV == 4)
+```
+
+2. FatalPersons is the data frame now containing information on people who died in vehicle accidents.
+
+```{r}
+q3 <- per %>% 
+  drop_na(MAKE) %>% 
+  filter(INJ_SEV == 4) %>%
+  group_by(MAKE) %>%
+  summarise(NumDeaths = n()) %>%
+  arrange(desc(NumDeaths))
+
+
+DeadliestMake <- per %>% filter(MAKE == 20)
+
+```
+
+3. DeadliestMake is the data for the make with the highest death count.
+
+```{r}
+#q4 <- FatalPersons %>% inner_join(MakeNames)
+#q4 <- q4 %>% inner_join(CN, by = "STATE")
+#head(q4)
+```
+
+```{r}
+AccPer <- acc %>% inner_join(per, by = "ST_CASE")
+head(AccPer)
+```
+5. The two tables, acc and per, were joined by ST_CASE.
+
+```{r}
+q6 <- AccPer %>% mutate(Sex = ifelse(SEX == 1, "Male", ifelse(SEX == 2, "Female", "Indeterminate"))) %>% mutate(DayOfWeek = wday(DAY_WEEK, label = TRUE)) %>%
+  group_by(DayOfWeek, HOUR.x, Sex) %>%
+  summarise(NumAccidents = n())
+
+q6 <- q6 %>% arrange(desc(NumAccidents)) %>% 
+  rename(Hour = HOUR.x) %>%
+  filter(Hour > 0 & Hour < 25)
+
+q6Vis <- q6 %>% ggplot(aes(x = Hour, y = NumAccidents, fill = Sex)) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  facet_wrap(~ DayOfWeek) +
+  labs(title = "Tally of Accidents Separated by Day of Week, Hour, and Sex", x = "Hour of Day", y = "Number of Accidents")
+
+q6Vis
+```
+
+
+
+
+
+
